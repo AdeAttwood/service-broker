@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+
+set -e
+
+wait_until() {
+    until kubectl get pod --all-namespaces | grep "$2" | grep "$1" > /dev/null 2>&1; do
+        echo "Waiting for '$2' ..."
+        sleep 1
+    done
+}
+
+export IMAGE=localhost:5000/service-broker
+export TAG=latest
+
+make push
+
+./scripts/service-catalog install
+wait_until "1\/1" "catalog-catalog-controller-manager"
+
+./scripts/service-broker install
+wait_until "1\/1" "service-broker"
+
+kubectl create ns test-ns || true
+kubectl apply -f ./manifests/mysql
+wait_until "1\/1" "mysql-instance"
+wait_until "Completed" "binding-job"
+wait_until "1\/1" "wordpress"
+#kubectl delete -f ./manifests/mysql
+#kubectl delete ns test-ns

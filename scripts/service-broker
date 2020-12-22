@@ -1,0 +1,35 @@
+
+#!/usr/bin/env sh
+
+install() {
+    kubectl create ns service-broker
+    helm upgrade --install service-broker --namespace service-broker \
+        charts/service-broker \
+        --set image="${IMAGE:-adeattwood/service-broker:latest}",imagePullPolicy="Always"
+
+    exit 0
+}
+
+uninstall() {
+    helm delete service-broker -n service-broker
+    kubectl delete clusterservicebroker.servicecatalog.k8s.io/service-broker
+    exit 0
+}
+
+case $1 in
+    install) install;;
+    uninstall) uninstall;;
+esac
+
+cat << HELP
+
+Practically Kubernetes Service Broker
+
+Commands
+    install:   Installs service catalog
+    uninstall: Uninstalls service catalog
+
+Usage:
+    $0 install
+
+HELP

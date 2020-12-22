@@ -1,0 +1,34 @@
+
+#!/usr/bin/env sh
+
+install() {
+    helm repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
+    kubectl create ns catalog
+    helm install catalog svc-cat/catalog --namespace catalog --set asyncBindingOperationsEnabled=true
+
+    exit 0
+}
+
+uninstall() {
+    kubectl delete ns catalog
+    exit 0
+}
+
+case $1 in
+    install) install;;
+    uninstall) uninstall;;
+esac
+
+cat << HELP
+
+Kubernetes Service Catalog
+https://svc-cat.io/
+
+Commands
+    install:   Installs service catalog
+    uninstall: Uninstalls service catalog
+
+Usage:
+    $0 install
+
+HELP

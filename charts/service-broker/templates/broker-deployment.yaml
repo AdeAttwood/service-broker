@@ -1,0 +1,79 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    app: {{ template "fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      serviceAccount: {{ .Values.rbac.serviceAccount.name | quote }}
+      containers:
+      - name: service-broker
+        image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        command:
+        - /opt/service-broker/service-broker
+        args:
+        - --port
+        - "8443"
+        {{- if .Values.tls.cert}}
+        - --tlsCert
+        - "{{ .Values.tls.cert }}"
+        {{- end}}
+        {{- if .Values.tls.key}}
+        - --tlsKey
+        - "{{ .Values.tls.key }}"
+        {{- end}}
+        {{- if .Values.authenticate}}
+        - --authenticate-k8s-token
+        {{- end}}
+        - -v
+        - "5"
+        - -logtostderr
+        - --tls-cert-file
+        - "/var/run/service-broker/starterpack.crt"
+        - --tls-private-key-file
+        - "/var/run/service-broker/starterpack.key"
+        ports:
+          - containerPort: 8443
+        readinessProbe:
+          tcpSocket:
+            port: 8443
+          failureThreshold: 1
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        env:
+          - name: SERVICE_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        volumeMounts:
+        - mountPath: /var/run/service-broker
+          name: service-broker-ssl
+          readOnly: true
+      volumes:
+      - name: service-broker-ssl
+        secret:
+          defaultMode: 420
+          secretName: {{ template "fullname" . }}-service-broker-cert
+          items:
+          - key: tls.crt
+            path: starterpack.crt
+          - key: tls.key
+            path: starterpack.key
