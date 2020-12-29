@@ -49,7 +49,71 @@ func (s *MysqlInstance) GetHost(instanceID string, namespace string) string {
 }
 
 func (s *MysqlInstance) GetDebindSpec(options BindOptions) *kube.Spec {
-	return &kube.Spec{Namespace: options.Namespace}
+	deploymentHost := s.GetHost(options.InstanceID, options.Namespace)
+	deploymentName := fmt.Sprintf("mysql-instance-%s", options.InstanceID)
+	rootSecretName := fmt.Sprintf("%s-root-secret", deploymentName)
+	bindingSecretName := fmt.Sprintf("binding-secret-%s", options.ID)
+
+	return &kube.Spec{
+		Namespace: options.Namespace,
+		Lables: map[string]string{
+			"service-binding-id":  options.ID,
+			"service-instance-id": options.InstanceID,
+			"service-id":          s.Definition().ID,
+			"service-name":        s.Definition().Name,
+		},
+		Jobs: []batchV1.Job{
+			{
+				ObjectMeta: metaV1.ObjectMeta{
+					Name: fmt.Sprintf("debinding-job-%s", options.ID),
+				},
+				Spec: batchV1.JobSpec{
+					Template: coreV1.PodTemplateSpec{
+						Spec: coreV1.PodSpec{
+							RestartPolicy:         coreV1.RestartPolicyOnFailure,
+							ActiveDeadlineSeconds: int64Ptr(120),
+							Containers: []coreV1.Container{
+								{
+									Name:    "mysql",
+									Image:   "mysql:5.7",
+									Command: []string{"bash", "/tmp/debind.bash"},
+									Env: []coreV1.EnvVar{
+										{
+											Name:  "MYSQL_HOST",
+											Value: deploymentHost,
+										},
+										kube.EnvSecret("MYSQL_ROOT_PASSWORD", rootSecretName, "password"),
+										kube.EnvSecret("DB_USER", bindingSecretName, "user"),
+									},
+									VolumeMounts: []coreV1.VolumeMount{
+										{
+											Name:      "config-volume",
+											MountPath: "/tmp/debind.bash",
+											ReadOnly:  true,
+											SubPath:   "debind.bash",
+										},
+									},
+								},
+							},
+							Volumes: []coreV1.Volume{
+								{
+									Name: "config-volume",
+									VolumeSource: coreV1.VolumeSource{
+										ConfigMap: &coreV1.ConfigMapVolumeSource{
+											LocalObjectReference: coreV1.LocalObjectReference{
+												Name: deploymentName,
+											},
+											DefaultMode: int32Ptr(500),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func (s *MysqlInstance) GetBindSpec(options BindOptions) *kube.Spec {
@@ -201,6 +265,18 @@ mysql -uroot -h "$MYSQL_HOST" -e "CREATE SCHEMA IF NOT EXISTS $DB_NAME;"
 mysql -uroot -h "$MYSQL_HOST" -e "CREATE USER IF NOT EXISTS '$DB_USER'@'%' IDENTIFIED BY '$DB_PASSWORD';"
 mysql -uroot -h "$MYSQL_HOST" -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'%';"
 mysql -uroot -h "$MYSQL_HOST" -e "FLUSH PRIVILEGES;"
+`,
+					"debind.bash": `
+set -e
+
+export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"
+
+until mysql -uroot -h "$MYSQL_HOST" -e ";" > /dev/null 2>&1; do
+    echo "Waiting for host '$MYSQL_HOST'"
+done
+
+echo "Removing user '$DB_USER'"
+mysql -uroot -h "$MYSQL_HOST" -e "DROP USER '$DB_USER';"
 `,
 				},
 			},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -208,6 +209,7 @@ func (b *BusinessLogic) Unbind(request *osb.UnbindRequest, c *broker.RequestCont
 	defer b.Unlock()
 
 	debindSpec.Create(b.k8sClient)
+	time.Sleep(10 * time.Second)
 	bindSpec.Delete(b.k8sClient)
 
 	return &broker.UnbindResponse{}, nil
