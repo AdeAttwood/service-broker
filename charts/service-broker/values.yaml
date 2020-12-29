@@ -6,6 +6,8 @@ imagePullPolicy: IfNotPresent
 authenticate: true
 # Certificate details to use for TLS. Leave blank to not use TLS
 tls:
+  # You can disable tls to use over http.
+  enabled: true
   # base-64 encoded PEM data for the TLS certificate
   cert:
   # base-64 encoded PEM data for the private key matching the certificate

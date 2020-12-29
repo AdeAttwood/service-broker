@@ -44,10 +44,14 @@ spec:
         - -v
         - "5"
         - -logtostderr
+        {{- if .Values.tls.enabled }}
         - --tls-cert-file
         - "/var/run/service-broker/starterpack.crt"
         - --tls-private-key-file
         - "/var/run/service-broker/starterpack.key"
+        {{- else }}
+        - --insecure
+        {{- end }}{{/* if .Values.tls.enabled */}}
         ports:
           - containerPort: 8443
         readinessProbe:
@@ -63,6 +67,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+        {{- if .Values.tls.enabled }}
         volumeMounts:
         - mountPath: /var/run/service-broker
           name: service-broker-ssl
@@ -77,3 +82,4 @@ spec:
             path: starterpack.crt
           - key: tls.key
             path: starterpack.key
+        {{- end }}{{/* if .Values.tls.enabled */}}

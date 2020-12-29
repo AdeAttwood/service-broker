@@ -33,11 +33,18 @@ helm install catalog svc-cat/catalog --namespace catalog --set asyncBindingOpera
 
 ## Installation
 
-**TODO: Better installation of cart. This is installing it from the repo**
+Installation with helm
 
 ```bash
+helm repo add ibm https://charts.s3.eu-gb.cloud-object-storage.appdomain.cloud
 kubectl create ns service-broker
-helm install service-broker --namespace service-broker charts/service-broker
+helm install service-broker ibm/service-broker --namespace service-broker
+```
+
+If you have the service catalog cli installed you can verify the installation
+
+```bash
+svcat get classes
 ```
 
 ## Getting started
@@ -86,6 +93,67 @@ Remove the service instance
 
 ```bash
 kubectl delete -f manifests/mysql-instance-service-instance.yaml
+```
+
+## Cloud Foundry for Kubernetes
+
+Service broker supports [Cloud Foundry for
+Kubernetes](https://github.com/cloudfoundry/cf-for-k8s) this allows you to bind
+services to your Cloud Foundry deployments. For more info on getting cloud
+foundry set up in your cluster you can see there [Getting Started
+Guide](https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/getting-started-tutorial.md).
+To work with Cloud Foundry you will need to install with some variables set.
+
+```bash
+helm install service-broker ./charts/service-broker \
+    --set tls.enabled=false \
+    --set deployClusterServiceBroker=false \
+    --namespace service-broker
+```
+
+**Link Cloud Foundry**
+
+This will tell Cloud Foundry about Service Broker and list all of the available
+services
+
+```bash
+cf create-service-broker service-broker user pass \
+    http://service-broker-service-broker.service-broker.svc.cluster.local
+
+cf service-access
+```
+
+**Enable Services**
+
+You can enable selective services in your deployment with `enable-service-access`
+
+```bash
+cf enable-service-access mysql-instance
+```
+
+**Create a service instance**
+
+Now all of the admin is done you can create a service instance. This creates a
+`mysql-instance` with the `default` plan called `my-mysql-instance`
+
+```bash
+cf create-service mysql-instance default my-mysql-instance
+```
+
+**Service Binding**
+
+Now we have a service instance we can bind it to a application. This example is
+the `test-app` from the [Getting Started
+Guide](https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/getting-started-tutorial.md).
+Once you restart you application the service cerdenals will be avlaidble in the
+[VCAP-SERVICES](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
+environment variable. You can also add a service binding in the [application
+manifest](https://docs.cloudfoundry.org/devguide/deploy-apps/manifest-attributes.html#services-block)
+but you will need to generate the service first as above
+
+```bash
+cf bind-service test-app my-mysql-instance
+cf restage test-app
 ```
 
 ## TODO

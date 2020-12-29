@@ -12,7 +12,11 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
+  {{ if .Values.tls.enabled }}
   url: https://{{ template "fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  {{- else }}
+  url: http://{{ template "fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  {{- end }}{{/* if .Values.tls.enabled */}}
   insecureSkipTLSVerify: true
 {{- if .Values.authenticate}}
   authInfo:

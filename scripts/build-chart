@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+mkdir -p chart-repo && cd chart-repo
+curl https://charts.s3.eu-gb.cloud-object-storage.appdomain.cloud/index.yaml > index.yaml
+helm package ../charts/service-broker
+helm repo index . --merge index.yaml --url https://charts.s3.eu-gb.cloud-object-storage.appdomain.cloud

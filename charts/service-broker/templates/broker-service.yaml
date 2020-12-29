@@ -12,5 +12,9 @@ spec:
     app: {{ template "fullname" . }}
   ports:
   - protocol: TCP
+    {{- if .Values.tls.enabled }}
     port: 443
+    {{- else }}
+    port: 80
+    {{- end }}{{/* if .Values.tls.enabled */}}
     targetPort: 8443
