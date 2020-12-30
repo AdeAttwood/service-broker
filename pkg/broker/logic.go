@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +91,9 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 	response := broker.ProvisionResponse{}
 	if request.AcceptsIncomplete {
 		response.Async = b.async
+		go spec.Create(b.k8sClient)
+	} else {
+		spec.Create(b.k8sClient)
 	}
 
 	return &response, nil
@@ -118,12 +120,17 @@ func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.R
 
 	b.Lock()
 	defer b.Unlock()
-	deprovisionSpec.Create(b.k8sClient)
-	spec.Delete(b.k8sClient)
 
 	response := broker.DeprovisionResponse{}
 	if request.AcceptsIncomplete {
 		response.Async = b.async
+		go func() {
+			deprovisionSpec.Create(b.k8sClient)
+			spec.Delete(b.k8sClient)
+		}()
+	} else {
+		deprovisionSpec.Create(b.k8sClient)
+		spec.Delete(b.k8sClient)
 	}
 
 	return &response, nil
@@ -152,7 +159,6 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 
 	b.Lock()
 	defer b.Unlock()
-	spec.Create(b.k8sClient)
 
 	response := broker.BindResponse{
 		BindResponse: osb.BindResponse{
@@ -160,13 +166,16 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 		},
 	}
 
+	if request.AcceptsIncomplete {
+		response.Async = b.async
+		go spec.Create(b.k8sClient)
+	} else {
+		spec.Create(b.k8sClient)
+	}
+
 	// Add all of the values from the bind spec into the response secret
 	for k, v := range spec.Secrets[0].Data {
 		response.BindResponse.Credentials[k] = string(v)
-	}
-
-	if request.AcceptsIncomplete {
-		response.Async = b.async
 	}
 
 	return &response, nil
@@ -209,7 +218,6 @@ func (b *BusinessLogic) Unbind(request *osb.UnbindRequest, c *broker.RequestCont
 	defer b.Unlock()
 
 	debindSpec.Create(b.k8sClient)
-	time.Sleep(10 * time.Second)
 	bindSpec.Delete(b.k8sClient)
 
 	return &broker.UnbindResponse{}, nil

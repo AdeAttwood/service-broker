@@ -3,11 +3,13 @@ package kube
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -72,14 +74,15 @@ func (s *Spec) InjectLabels(labels map[string]string) {
 			s.Jobs[i].ObjectMeta.Labels[label] = value
 		}
 	}
-
 }
 
 func (s *Spec) Delete(client kubernetes.Interface) error {
+	deletePolicy := metaV1.DeletePropagationForeground
+	deleteOptions := metaV1.DeleteOptions{PropagationPolicy: &deletePolicy}
 	for i := 0; i < len(s.Jobs); i++ {
 		jobSpec := &s.Jobs[i]
 		jobClient := client.BatchV1().Jobs(s.Namespace)
-		jobErr := jobClient.Delete(context.TODO(), jobSpec.Name, metaV1.DeleteOptions{})
+		jobErr := jobClient.Delete(context.TODO(), jobSpec.Name, deleteOptions)
 		if jobErr != nil {
 			return jobErr
 		}
@@ -89,7 +92,7 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 	for i := 0; i < len(s.Services); i++ {
 		serviceSpec := &s.Services[i]
 		serviceClient := client.CoreV1().Services(s.Namespace)
-		serviceErr := serviceClient.Delete(context.TODO(), serviceSpec.Name, metaV1.DeleteOptions{})
+		serviceErr := serviceClient.Delete(context.TODO(), serviceSpec.Name, deleteOptions)
 		if serviceErr != nil {
 			return serviceErr
 		}
@@ -99,7 +102,7 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 	for i := 0; i < len(s.Deployments); i++ {
 		deploymentSpec := &s.Deployments[i]
 		deploymentClient := client.AppsV1().Deployments(s.Namespace)
-		deploymentErr := deploymentClient.Delete(context.TODO(), deploymentSpec.Name, metaV1.DeleteOptions{})
+		deploymentErr := deploymentClient.Delete(context.TODO(), deploymentSpec.Name, deleteOptions)
 		if deploymentErr != nil {
 			return deploymentErr
 		}
@@ -109,7 +112,7 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 	for i := 0; i < len(s.PVCS); i++ {
 		pvcSpec := &s.PVCS[i]
 		pvcClient := client.CoreV1().PersistentVolumeClaims(s.Namespace)
-		pvcErr := pvcClient.Delete(context.TODO(), pvcSpec.Name, metaV1.DeleteOptions{})
+		pvcErr := pvcClient.Delete(context.TODO(), pvcSpec.Name, deleteOptions)
 		if pvcErr != nil {
 			return pvcErr
 		}
@@ -119,7 +122,7 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 	for i := 0; i < len(s.ConfigMaps); i++ {
 		configMapSpec := &s.ConfigMaps[i]
 		configMapClient := client.CoreV1().ConfigMaps(s.Namespace)
-		configMapErr := configMapClient.Delete(context.TODO(), configMapSpec.Name, metaV1.DeleteOptions{})
+		configMapErr := configMapClient.Delete(context.TODO(), configMapSpec.Name, deleteOptions)
 		if configMapErr != nil {
 			return configMapErr
 		}
@@ -129,7 +132,7 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 	for i := 0; i < len(s.Secrets); i++ {
 		secretSpec := &s.Secrets[i]
 		secretsClient := client.CoreV1().Secrets(s.Namespace)
-		secretErr := secretsClient.Delete(context.TODO(), secretSpec.Name, metaV1.DeleteOptions{})
+		secretErr := secretsClient.Delete(context.TODO(), secretSpec.Name, deleteOptions)
 		if secretErr != nil {
 			return secretErr
 		}
@@ -141,11 +144,12 @@ func (s *Spec) Delete(client kubernetes.Interface) error {
 
 func (s *Spec) Create(client kubernetes.Interface) error {
 	s.InjectLabels(s.Lables)
+	createOptions := metaV1.CreateOptions{}
 
 	for i := 0; i < len(s.Secrets); i++ {
 		secretSpec := &s.Secrets[i]
 		secretsClient := client.CoreV1().Secrets(s.Namespace)
-		secret, secretErr := secretsClient.Create(context.TODO(), secretSpec, metaV1.CreateOptions{})
+		secret, secretErr := secretsClient.Create(context.TODO(), secretSpec, createOptions)
 		if secretErr != nil {
 			return secretErr
 		}
@@ -155,7 +159,7 @@ func (s *Spec) Create(client kubernetes.Interface) error {
 	for i := 0; i < len(s.ConfigMaps); i++ {
 		configMapSpec := &s.ConfigMaps[i]
 		configMapClient := client.CoreV1().ConfigMaps(s.Namespace)
-		configMap, configMapErr := configMapClient.Create(context.TODO(), configMapSpec, metaV1.CreateOptions{})
+		configMap, configMapErr := configMapClient.Create(context.TODO(), configMapSpec, createOptions)
 		if configMapErr != nil {
 			return configMapErr
 		}
@@ -165,41 +169,64 @@ func (s *Spec) Create(client kubernetes.Interface) error {
 	for i := 0; i < len(s.PVCS); i++ {
 		pvcSpec := &s.PVCS[i]
 		pvcClient := client.CoreV1().PersistentVolumeClaims(s.Namespace)
-		pvc, pvcErr := pvcClient.Create(context.TODO(), pvcSpec, metaV1.CreateOptions{})
+		pvc, pvcErr := pvcClient.Create(context.TODO(), pvcSpec, createOptions)
 		if pvcErr != nil {
 			return pvcErr
 		}
 		fmt.Printf("Created pvc %q.\n", pvc.GetObjectMeta().GetName())
 	}
 
+	var deployments = make([]string, 0)
+	deploymentClient := client.AppsV1().Deployments(s.Namespace)
 	for i := 0; i < len(s.Deployments); i++ {
 		deploymentSpec := &s.Deployments[i]
-		deploymentClient := client.AppsV1().Deployments(s.Namespace)
-		deployment, deploymentErr := deploymentClient.Create(context.TODO(), deploymentSpec, metaV1.CreateOptions{})
+		deployment, deploymentErr := deploymentClient.Create(context.TODO(), deploymentSpec, createOptions)
 		if deploymentErr != nil {
 			return deploymentErr
 		}
 		fmt.Printf("Created deployment %q.\n", deployment.GetObjectMeta().GetName())
+		deployments = append(deployments, deployment.GetObjectMeta().GetName())
+	}
+
+	for i := 0; i < len(deployments); i++ {
+		deploymentName := deployments[i]
+		waitFunc := isDeploymentReady(deploymentClient, deploymentName)
+		fmt.Printf("Waiting for %q\n", deploymentName)
+		if err := wait.PollImmediate(time.Second, time.Duration(120)*time.Second, waitFunc); err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < len(s.Services); i++ {
 		serviceSpec := &s.Services[i]
 		serviceClient := client.CoreV1().Services(s.Namespace)
-		service, serviceErr := serviceClient.Create(context.TODO(), serviceSpec, metaV1.CreateOptions{})
+		service, serviceErr := serviceClient.Create(context.TODO(), serviceSpec, createOptions)
 		if serviceErr != nil {
 			return serviceErr
 		}
 		fmt.Printf("Created service %q.\n", service.GetObjectMeta().GetName())
 	}
 
+	var jobs = make([]string, 0)
+	jobClient := client.BatchV1().Jobs(s.Namespace)
 	for i := 0; i < len(s.Jobs); i++ {
 		jobSpec := &s.Jobs[i]
-		jobClient := client.BatchV1().Jobs(s.Namespace)
-		job, jobErr := jobClient.Create(context.TODO(), jobSpec, metaV1.CreateOptions{})
+
+		job, jobErr := jobClient.Create(context.TODO(), jobSpec, createOptions)
 		if jobErr != nil {
 			return jobErr
 		}
 		fmt.Printf("Created job %q.\n", job.GetObjectMeta().GetName())
+		jobs = append(jobs, job.GetObjectMeta().GetName())
+	}
+
+	for i := 0; i < len(jobs); i++ {
+		jobName := jobs[i]
+		waitFunc := isJobComplete(jobClient, jobName)
+		fmt.Printf("Waiting for %q\n", jobName)
+		if err := wait.PollImmediate(time.Second, time.Duration(120)*time.Second, waitFunc); err != nil {
+			return err
+		}
 	}
 
 	return nil
