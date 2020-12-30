@@ -27,6 +27,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		namespace: o.ServiceNamespace,
 		services: map[string]service.Service{
 			"4f6e6cf6-ffdd-425f-a2c7-3c9258ad246a": service.NewMysqlInstance(),
+			"2a661d27-20a0-40f1-9320-15ea144a694c": service.NewMinioInstance(),
 		},
 	}, nil
 }

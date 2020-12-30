@@ -1,0 +1,8 @@
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: minio-instance-service-instance
+  namespace: test-ns
+spec:
+  clusterServiceClassExternalName: minio-instance
+  clusterServicePlanExternalName: default

@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc
+  namespace: test-ns
+  labels:
+    app: mc
+spec:
+  selector:
+    matchLabels:
+      app: mc
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mc
+    spec:
+      containers:
+      - image: minio/mc:latest
+        name: mc
+        command:
+          - bash
+          - -c
+          - |
+            while true; do
+                mc ls m1
+                sleep 2
+            done
+        env:
+        - name: MC_HOST_m1
+          valueFrom:
+            secretKeyRef:
+              name: minio-instance-service-binding
+              key: minioalias
