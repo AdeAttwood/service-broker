@@ -192,7 +192,7 @@ func (s *Spec) Create(client kubernetes.Interface) error {
 		deploymentName := deployments[i]
 		waitFunc := isDeploymentReady(deploymentClient, deploymentName)
 		fmt.Printf("Waiting for %q\n", deploymentName)
-		if err := wait.PollImmediate(time.Second, time.Duration(120)*time.Second, waitFunc); err != nil {
+		if err := wait.PollImmediate(time.Second, time.Duration(5)*time.Minute, waitFunc); err != nil {
 			return err
 		}
 	}
@@ -224,7 +224,7 @@ func (s *Spec) Create(client kubernetes.Interface) error {
 		jobName := jobs[i]
 		waitFunc := isJobComplete(jobClient, jobName)
 		fmt.Printf("Waiting for %q\n", jobName)
-		if err := wait.PollImmediate(time.Second, time.Duration(120)*time.Second, waitFunc); err != nil {
+		if err := wait.PollImmediate(time.Second, time.Duration(5)*time.Minute, waitFunc); err != nil {
 			return err
 		}
 	}
