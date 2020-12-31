@@ -87,7 +87,6 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 
 	b.Lock()
 	defer b.Unlock()
-	spec.Create(b.k8sClient)
 
 	response := broker.ProvisionResponse{}
 	if request.AcceptsIncomplete {
@@ -169,10 +168,11 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 
 	if request.AcceptsIncomplete {
 		response.Async = b.async
-		go spec.Create(b.k8sClient)
-	} else {
-		spec.Create(b.k8sClient)
 	}
+
+	// Always throw the binding request into the background to ensure this
+	// request dose not timeout
+	go spec.Create(b.k8sClient)
 
 	// Add all of the values from the bind spec into the response secret
 	for k, v := range spec.Secrets[0].Data {
