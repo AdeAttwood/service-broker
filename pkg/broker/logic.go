@@ -109,6 +109,13 @@ func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.R
 		LabelSelector: fmt.Sprintf("service-instance-id=%s", request.InstanceID),
 	})
 
+	// If there are no resources in the list with the requested service instance
+	// id then just skip deprivation. This is because the resources have been
+	// deleted by something else and there is nothing to deprivation
+	if len(list.Items) == 0 {
+		return &broker.DeprovisionResponse{}, nil
+	}
+
 	specOptions := service.ServiceOptions{
 		ID:        request.InstanceID,
 		PlanID:    request.PlanID,
@@ -193,6 +200,14 @@ func (b *BusinessLogic) Unbind(request *osb.UnbindRequest, c *broker.RequestCont
 		list, _ := b.k8sClient.CoreV1().Secrets(v1.NamespaceAll).List(context.TODO(), v1.ListOptions{
 			LabelSelector: fmt.Sprintf("service-binding-id=%s", request.BindingID),
 		})
+
+		// If there is no resources with this service binding id then just
+		// return. This is because the resources have been deleted by something
+		// / someone else and the rest of the unbinding will fail because there
+		// are no resources to delete
+		if len(list.Items) == 0 {
+			return &broker.UnbindResponse{}, nil
+		}
 
 		request.ServiceID = list.Items[0].Labels["service-id"]
 		requestedService = b.services[request.ServiceID]
