@@ -3,6 +3,8 @@ kind: ServiceInstance
 metadata:
   name: minio-instance-service-instance
   namespace: test-ns
+  annotations:
+    kapp.k14s.io/update-strategy: skip
 spec:
   clusterServiceClassExternalName: minio-instance
   clusterServicePlanExternalName: default

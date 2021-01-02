@@ -3,6 +3,8 @@ kind: ServiceInstance
 metadata:
   name: mysql-instance-service-instance
   namespace: test-ns
+  annotations:
+    kapp.k14s.io/update-strategy: skip
 spec:
   clusterServiceClassExternalName: mysql-instance
   clusterServicePlanExternalName: default

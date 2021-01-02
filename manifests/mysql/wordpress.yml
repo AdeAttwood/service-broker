@@ -17,6 +17,8 @@ kind: Service
 metadata:
   name: wordpress
   namespace: test-ns
+  annotations:
+    kapp.k14s.io/disable-wait: ""
   labels:
     app: wordpress
 spec:
