@@ -39,14 +39,27 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		}
 	}
 
+	services := map[string]service.Service{}
+
+	// Add the mysql service
+	mysql := service.NewMysqlInstance()
+	services[mysql.Definition().ID] = mysql
+
+	// Add the minio service
+	minio := service.NewMinioInstance()
+	services[minio.Definition().ID] = minio
+
+	// Add the shared mysql instances to the service list
+	for i := 0; i < len(config.SharedMysql); i++ {
+		sharedMysql := service.NewSharedMysql(config.SharedMysql[i])
+		services[sharedMysql.Definition().ID] = sharedMysql
+	}
+
 	return &BusinessLogic{
 		async:     o.Async,
 		k8sClient: o.K8sClient,
 		namespace: o.ServiceNamespace,
-		services: map[string]service.Service{
-			"4f6e6cf6-ffdd-425f-a2c7-3c9258ad246a": service.NewMysqlInstance(),
-			"2a661d27-20a0-40f1-9320-15ea144a694c": service.NewMinioInstance(),
-		},
+		services:  services,
 	}, nil
 }
 
@@ -98,9 +111,10 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 	}
 
 	spec := requestedService.GetProvisionSpec(service.ServiceOptions{
-		ID:        request.InstanceID,
-		PlanID:    request.PlanID,
-		Namespace: namespace,
+		ID:              request.InstanceID,
+		PlanID:          request.PlanID,
+		Namespace:       namespace,
+		GlobalNamespace: b.namespace,
 	})
 
 	b.Lock()
@@ -135,9 +149,10 @@ func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.R
 	}
 
 	specOptions := service.ServiceOptions{
-		ID:        request.InstanceID,
-		PlanID:    request.PlanID,
-		Namespace: list.Items[0].Namespace,
+		ID:              request.InstanceID,
+		PlanID:          request.PlanID,
+		Namespace:       list.Items[0].Namespace,
+		GlobalNamespace: b.namespace,
 	}
 
 	spec := requestedService.GetProvisionSpec(specOptions)
@@ -177,9 +192,10 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 	}
 
 	spec := requestedService.GetBindSpec(service.BindOptions{
-		ID:         request.BindingID,
-		InstanceID: request.InstanceID,
-		Namespace:  namespace,
+		ID:              request.BindingID,
+		InstanceID:      request.InstanceID,
+		Namespace:       namespace,
+		GlobalNamespace: b.namespace,
 	})
 
 	b.Lock()
@@ -241,9 +257,10 @@ func (b *BusinessLogic) Unbind(request *osb.UnbindRequest, c *broker.RequestCont
 	}
 
 	bindingOptions := service.BindOptions{
-		ID:         request.BindingID,
-		InstanceID: request.InstanceID,
-		Namespace:  namespace,
+		ID:              request.BindingID,
+		InstanceID:      request.InstanceID,
+		Namespace:       namespace,
+		GlobalNamespace: b.namespace,
 	}
 	bindSpec := requestedService.GetBindSpec(bindingOptions)
 	debindSpec := requestedService.GetDebindSpec(bindingOptions)

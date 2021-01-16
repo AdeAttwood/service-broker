@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-database
+  namespace: test-ns
+  labels:
+    app: mysql-database
+spec:
+  selector:
+    matchLabels:
+      app: mysql-database
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql-database
+    spec:
+      containers:
+      - image: mysql:5.7
+        name: mysql
+        command:
+          - bash
+          - -ec
+          - |
+            export MYSQL_PWD="$DB_PASSWORD"
+
+            while true; do
+                mysql -u "$DB_USER" -h "$DB_HOST" -P "$DB_PORT" -e "SHOW DATABASES;"
+                sleep 5
+            done
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mysql-database-service-binding
+              key: host
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-database-service-binding
+              key: user
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mysql-database-service-binding
+              key: database
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-database-service-binding
+              key: password
+        resources:
+            limits:
+              cpu: 300m
+              memory: 512Mi
+            requests:
+              cpu: 300m
+              memory: 256Mi

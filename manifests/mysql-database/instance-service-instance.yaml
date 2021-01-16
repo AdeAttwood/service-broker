@@ -1,0 +1,10 @@
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: mysql-database-service-instance
+  namespace: test-ns
+  annotations:
+    kapp.k14s.io/update-strategy: skip
+spec:
+  clusterServiceClassExternalName: mysql-shared-local
+  clusterServicePlanExternalName: default

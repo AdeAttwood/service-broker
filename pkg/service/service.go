@@ -15,15 +15,17 @@ type Service interface {
 }
 
 type ServiceOptions struct {
-	ID        string
-	PlanID    string
-	Namespace string
+	ID              string
+	PlanID          string
+	Namespace       string
+	GlobalNamespace string
 }
 
 type BindOptions struct {
-	ID         string
-	InstanceID string
-	Namespace  string
+	ID              string
+	InstanceID      string
+	Namespace       string
+	GlobalNamespace string
 }
 
 func int32Ptr(i int32) *int32 { return &i }
