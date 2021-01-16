@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,3 +33,10 @@ spec:
             secretKeyRef:
               name: minio-instance-service-binding
               key: minioalias
+        resources:
+            limits:
+              cpu: 300m
+              memory: 512Mi
+            requests:
+              cpu: 300m
+              memory: 256Mi
