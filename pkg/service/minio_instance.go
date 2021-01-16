@@ -238,6 +238,7 @@ set -e
 
 until mc ls myminio > /dev/null 2>&1; do
     echo "Waiting for minio"
+    sleep 5
 done
 
 cat > /tmp/policy.json <<EOF
@@ -267,6 +268,7 @@ set -e
 
 until mc ls myminio > /dev/null 2>&1; do
     echo "Waiting for minio"
+    sleep 5
 done
 
 mc admin user remove myminio "$MINIO_USER"

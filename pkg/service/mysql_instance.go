@@ -257,7 +257,8 @@ set -e
 export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"
 
 until mysql -uroot -h "$MYSQL_HOST" -e ";" > /dev/null 2>&1; do
-    echo "Waiting for host '$MYSQL_HOST'"
+	echo "Waiting for host '$MYSQL_HOST'"
+	sleep 5
 done
 
 echo "Creating databse '$DB_NAME' and granting privileges to '$DB_USER'"
@@ -272,7 +273,8 @@ set -e
 export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"
 
 until mysql -uroot -h "$MYSQL_HOST" -e ";" > /dev/null 2>&1; do
-    echo "Waiting for host '$MYSQL_HOST'"
+	echo "Waiting for host '$MYSQL_HOST'"
+	sleep 5
 done
 
 echo "Removing user '$DB_USER'"
