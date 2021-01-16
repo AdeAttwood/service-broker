@@ -30,6 +30,8 @@ spec:
         args:
         - --port
         - "8443"
+        - --config
+        - /var/run/service-broker-config/config.yaml
         {{- if .Values.tls.cert}}
         - --tlsCert
         - "{{ .Values.tls.cert }}"
@@ -67,12 +69,20 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-        {{- if .Values.tls.enabled }}
         volumeMounts:
+        - name: config
+          readOnly: true
+          mountPath: "/var/run/service-broker-config"
+        {{- if .Values.tls.enabled }}
         - mountPath: /var/run/service-broker
           name: service-broker-ssl
           readOnly: true
+        {{- end }}{{/* if .Values.tls.enabled */}}
       volumes:
+      - name: config
+        secret:
+          secretName: {{ template "fullname" . }}-config
+      {{- if .Values.tls.enabled }}
       - name: service-broker-ssl
         secret:
           defaultMode: 420

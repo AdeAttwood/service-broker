@@ -24,3 +24,12 @@ rbac:
     name: service-broker
     annotations: {}
     labels: {}
+
+config: |
+  sharedMysql:
+    # - name: default
+    #   id: 920719a6-f907-4682-8563-d587ed67a1fb
+    #   user: root
+    #   password: password
+    #   host: mysql.mysql.svc.cluster.local
+    #   port: 3306

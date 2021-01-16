@@ -16,7 +16,8 @@ type Options struct {
 	// The namespace all of the global services will be deployed into
 	ServiceNamespace string
 	// Kubernetes client-go instance for
-	K8sClient clientset.Interface
+	K8sClient  clientset.Interface
+	ConfigFile string
 }
 
 // AddFlags is a hook called to initialize the CLI flags for broker options.

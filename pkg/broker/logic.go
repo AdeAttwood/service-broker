@@ -3,7 +3,11 @@ package broker
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"sync"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +18,27 @@ import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 )
 
+type Config struct {
+	SharedMysql []service.SharedMysqlConfig `yaml:"sharedMysql"`
+}
+
 // NewBusinessLogic is a hook that is called with the Options the program is run
 // with. NewBusinessLogic is the place where you will initialize your
 // BusinessLogic the parameters passed in.
 func NewBusinessLogic(o Options) (*BusinessLogic, error) {
-	// For example, if your BusinessLogic requires a parameter from the command
-	// line, you would unpack it from the Options and set it on the
-	// BusinessLogic here.
+	// Read in the config file if the file is found. This will setup all
+	// of the external service that this service broker can provision / bind
+	// to.
+	config := &Config{}
+	filename, _ := filepath.Abs(o.ConfigFile)
+	yamlFile, err := ioutil.ReadFile(filename)
+	if err == nil {
+		err = yaml.Unmarshal(yamlFile, config)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return &BusinessLogic{
 		async:     o.Async,
 		k8sClient: o.K8sClient,

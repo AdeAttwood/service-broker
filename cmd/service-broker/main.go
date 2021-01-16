@@ -45,6 +45,7 @@ func init() {
 	flag.BoolVar(&options.AuthenticateK8SToken, "authenticate-k8s-token", false, "option to specify if the broker should validate the bearer auth token with kubernetes")
 	flag.StringVar(&options.KubeConfig, "kube-config", "", "specify the kube config path to be used")
 	flag.StringVar(&options.ServiceNamespace, "service-namespace", "", "The namespace that all of the global service instances will be provisioned in")
+	flag.StringVar(&options.ConfigFile, "config", "", "The yaml config file")
 	broker.AddFlags(&options.Options)
 	flag.Parse()
 }
