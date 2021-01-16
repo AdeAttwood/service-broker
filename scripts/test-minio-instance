@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+set -e
+
+wait_until() {
+    until kubectl get pod --all-namespaces | grep "$2" | grep "$1" > /dev/null 2>&1; do
+        echo "Waiting for '$2' ..."
+        sleep 1
+    done
+}
+
+kubectl create ns test-ns || true
+
+kubectl apply -f ./manifests/minio
+wait_until "1\/1" "minio-instance"
+wait_until "Complete" "binding-job"
+wait_until "1\/1" "mc"
+kubectl delete -f ./manifests/minio
+
+kubectl delete ns test-ns

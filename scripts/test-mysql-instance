@@ -9,17 +9,6 @@ wait_until() {
     done
 }
 
-export IMAGE=localhost:5000/service-broker
-export TAG=latest
-
-make push
-
-./scripts/service-catalog install
-wait_until "1\/1" "catalog-catalog-controller-manager"
-
-./scripts/service-broker install
-wait_until "1\/1" "service-broker"
-
 kubectl create ns test-ns || true
 
 kubectl apply -f ./manifests/mysql
@@ -27,11 +16,5 @@ wait_until "1\/1" "mysql-instance"
 wait_until "Completed" "binding-job"
 wait_until "1\/1" "wordpress"
 kubectl delete -f ./manifests/mysql
-
-kubectl apply -f ./manifests/minio
-wait_until "1\/1" "minio-instance"
-wait_until "Complete" "binding-job"
-wait_until "1\/1" "mc"
-kubectl delete -f ./manifests/minio
 
 kubectl delete ns test-ns

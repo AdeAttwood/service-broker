@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+set -e
+
+wait_until() {
+    until kubectl get pod --all-namespaces | grep "$2" | grep "$1" > /dev/null 2>&1; do
+        echo "Waiting for '$2' ..."
+        sleep 1
+    done
+}
+
+export IMAGE=localhost:5000/service-broker
+export TAG=latest
+
+make push
+
+kubectl create ns catalog || true
+helm upgrade --install catalog ibm/catalog --namespace catalog --set asyncBindingOperationsEnabled=true
+wait_until "1\/1" "catalog-catalog-controller-manager"
+
+kubectl create ns service-broker || true
+helm upgrade --install service-broker --namespace service-broker \
+    charts/service-broker \
+    --values scripts/test-values.yaml \
+    --set image="${IMAGE:-adeattwood/service-broker:latest}"
+wait_until "1\/1" "service-broker"
